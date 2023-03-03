@@ -20,6 +20,11 @@
   width: auto;
   max-width: 100%;
   background: #fff;
+  counter-reset: hotspot;
+}
+.h5p-image-hotspot-number:before {
+  counter-increment: hotspot;
+  content: counter(hotspot);
 }
 .h5p-image-hotspots-background {
   width: 100%;
