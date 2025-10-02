@@ -120,52 +120,70 @@
 
     this.actionInstances = [];
     var waitForLoaded = [];
-    this.config.content.forEach(function (action) {
+
+    // Itera sul contenuto del singolo hotspot (array contentItem dentro hotspot)
+    this.config.content.forEach(function (contentItem) {
       var $popupFraction = $('<div>', {
         'class': 'h5p-image-hotspot-popup-body-fraction',
         appendTo: $popupBody
       });
 
-      const machineName = action.library?.split(' ')[0];
+      var action = contentItem.action;
 
       // Enforce autoplay for transparent audios
-      if (machineName === 'H5P.Audio') {
+      if (action.library && action.library.split(' ')[0] === 'H5P.Audio') {
         if (action.params.playerMode === 'transparent') {
           action.params.autoplay = true;
         }
-      }
-      else if (machineName === 'H5P.Text' || machineName === 'H5P.Image') {
-        // @see https://www.w3.org/WAI/ARIA/apg/patterns/dialogmodal/
-        $popupFraction[0].setAttribute('tabindex', '-1');
       }
 
       var actionInstance = H5P.newRunnable(action, self.id);
 
       self.actionInstances.push(actionInstance);
-      if (machineName === 'H5P.Image' || machineName === 'H5P.Video') {
+
+      if (actionInstance.libraryInfo.machineName === 'H5P.Image' || actionInstance.libraryInfo.machineName === 'H5P.Video') {
         waitForLoaded.push(actionInstance);
       }
+
       actionInstance.attach($popupFraction);
 
-      if (machineName === 'H5P.Audio') {
+      // Se showLink è valorizzato e non vuoto, wrap del link
+      if (
+        contentItem.showLink &&
+        typeof contentItem.showLink === 'string' &&
+        contentItem.showLink.trim() !== ''
+      ) {
+        if (actionInstance.libraryInfo.machineName === 'H5P.Text') {
+          var $textEl = $popupFraction.find('p').first();
+          if ($textEl.length) {
+            $textEl.wrap('<a href="' + contentItem.showLink + '" target="_blank" rel="noopener noreferrer"></a>');
+          }
+        }
+        else if (actionInstance.libraryInfo.machineName === 'H5P.Image') {
+          var $imgEl = $popupFraction.find('img').first();
+          if ($imgEl.length) {
+            $imgEl.wrap('<a href="' + contentItem.showLink + '" target="_blank" rel="noopener noreferrer"></a>');
+          }
+        }
+      }
+
+      // Audio styling tweaks
+      if (actionInstance.libraryInfo.machineName === 'H5P.Audio') {
         if (actionInstance.audio && actionInstance.params.playerMode === 'full' && !!window.chrome) {
-          // Workaround for missing https://github.com/h5p/h5p-audio/pull/48
           actionInstance.audio.style.height = '54px';
         }
         else if (actionInstance.$audioButton && actionInstance.params.playerMode === 'transparent') {
-          // Completely hide transparent button
           actionInstance.$audioButton.css({ height: 0, padding: 0 });
         }
       }
 
-      // Stop screenreader to read fullscreen button
+      // Stop screenreader reading fullscreen button
       if (self.parent.fullscreenButton) {
         self.parent.fullscreenButton.tabIndex = -1;
       }
     });
 
     var readyToPopup = function () {
-      // Disable all hotspots
       self.toggleHotspotsTabindex(true);
       self.visible = true;
       self.popup.show(focusPopup);
@@ -207,7 +225,6 @@
     self.popup.on('closed', function (e) {
       self.hidePopup();
 
-      // Refocus hotspot
       if (e.data && e.data.refocus) {
         self.focus();
       }
@@ -221,10 +238,7 @@
     if (waitForLoaded.length) {
       var loaded = 0;
 
-      // Wait for libraries to load before showing popup
       waitForLoaded.forEach(function (unloaded) {
-
-        // Signal that library has finished loading
         var fire = function () {
           clearTimeout(timeout);
           unloaded.off('loaded', fire);
@@ -237,12 +251,10 @@
           }
         };
 
-        // Add timer fallback if loaded event is not triggered
         var timeout = setTimeout(fire, 1000);
         unloaded.on('loaded', fire, {unloaded: unloaded, timeout: timeout});
         unloaded.trigger('resize');
       });
-
     }
     else {
       setTimeout(function () {
@@ -250,7 +262,7 @@
       }, 100);
     }
 
-    // We don't get click events on body for iOS-devices
+    // iOS click event fix
     $('body').children().on('click.h5p-image-hotspot-popup', function (event) {
       var $target = $(event.target);
       if (self.visible && !$target.hasClass('h5p-enable-fullscreen') && !$target.hasClass('h5p-disable-fullscreen')
