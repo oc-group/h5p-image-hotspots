@@ -178,14 +178,35 @@
           "label": "Popup content",
           "importance": "medium",
           "field": {
-            "name": "action",
-            "type": "library",
-            "label": "Content Item",
-            "options": [
-              "H5P.Text 1.1",
-              "H5P.Video 1.6",
-              "H5P.Image 1.1",
-              "H5P.Audio 1.5"
+            "name": "contentItem",
+            "type": "group",
+            "fields": [
+              {
+                "name": "action",
+                "type": "library",
+                "label": "Content Item",
+                "options": [ "H5P.Text 1.1", "H5P.Video 1.6", "H5P.Image 1.1", "H5P.Audio 1.5" ]
+              },
+              {
+                "name": "showLink",
+                "type": "text",
+                "label": "Add a link",
+                "optional": true,
+                "default": "",
+                "widget": "showWhen",
+                "showWhen": {
+                  "rules": [
+                    {
+                      "field": "action",
+                      "equals": "H5P.Text 1.1"
+                    },
+                    {
+                      "field": "action",
+                      "equals": "H5P.Image 1.1"
+                    }
+                  ]
+                }
+              }
             ]
           }
         }
